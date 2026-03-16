@@ -1,0 +1,5 @@
+experiments:
+  - configs/grpo_config_exp1.yaml
+  - configs/grpo_config_exp2.yaml
+
+stop_on_error: true

@@ -1,0 +1,71 @@
+nerel_preproc:
+  local_dataset_path: "source_data"
+  out_dir: "data/nerel_processed"
+
+  do_split: true
+  split_by: "\n"
+
+  fraction_train: 0.01
+  fraction_dev: 0.01
+  fraction_test: 0.01
+  seed: 42
+  
+  
+grpo_data_prep:
+  input_dir: "data/nerel_processed"
+  out_dir: "data/nerel_grpo"
+
+  add_no_think: true
+  no_think_suffix: "/no_think"
+
+
+run:
+  experiment_name: "grpo_nerel_qwen3_4b"
+  runs_dir: "runs"
+
+
+grpo_train:
+  model: "source_models/qwen3-4b"
+  dataset: "data/nerel_grpo/train.jsonl"
+  external_plugins: "reward.py"
+  reward_funcs: "nerel_reward"
+
+  train_type: "lora"
+  torch_dtype: "bfloat16"
+  learning_rate: 2e-5
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 16
+
+  lora_rank: 32
+  lora_alpha: 64
+  target_modules: "all-linear"
+
+  num_generations: 8
+  generation_batch_size: 8
+  temperature: 0.7
+  top_p: 0.9
+
+  max_length: 2048
+  max_completion_length: 256
+
+  use_vllm: true
+  vllm_gpu_memory_utilization: 0.65
+  sleep_level: 1
+  vllm_max_model_len: 4096
+  vllm_tensor_parallel_size: 1
+  vllm_mode: "colocate"
+
+  logging_steps: 2
+  save_steps: 10
+  save_total_limit: 2
+  report_to: "none"
+
+  cuda_visible_devices: "0"
+
+
+grpo_eval:
+  dataset: "data/nerel_grpo/test.jsonl"
+  infer_backend: "pt"
+  max_new_tokens: 256
+  temperature: 0.0
+  top_p: 1.0

@@ -1,0 +1,21 @@
+name: swift-grpo
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - git
+  - gcc
+  - gxx
+
+  - pip:
+      - ms-swift
+      - vllm
+      - transformers
+      - datasets
+      - accelerate
+      - peft
+      - bitsandbytes
+      - pyyaml
+      - matplotlib
+      - seaborn
