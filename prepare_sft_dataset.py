@@ -25,6 +25,11 @@ def build_gold_batch(entities):
     return [[e["tag"], e["text"]] for e in entities]
 
 
+def build_assistant_answer(entities, indent=None):
+    gold_batch = build_gold_batch(entities)
+    return json.dumps(gold_batch, ensure_ascii=False, indent=indent)
+
+
 def build_messages(text, add_no_think=False, no_think_suffix="/no_think"):
     user_text = NEREL_JSON_INSTRUCTION_USER.format(text=text)
 
@@ -39,18 +44,32 @@ def build_messages(text, add_no_think=False, no_think_suffix="/no_think"):
 
 def transform_split(rows, add_no_think, no_think_suffix):
     out = []
+
     for row in rows:
         text = row["text"]
         entities = row["entities"]
-        gold_batch = build_gold_batch(entities)
-        if not gold_batch:
+
+        if not entities:
             continue
+
+        gold_batch = build_gold_batch(entities)
+
+        messages = build_messages(
+            text=text,
+            add_no_think=add_no_think,
+            no_think_suffix=no_think_suffix,
+        )
+        messages.append(
+            {"role": "assistant", "content": build_assistant_answer(entities)}
+        )
+
         out.append(
             {
-                "messages": build_messages(text, add_no_think, no_think_suffix),
+                "messages": messages,
                 "gold_batch": gold_batch,
             }
         )
+
     return out
 
 
@@ -60,7 +79,7 @@ def main():
     args = ap.parse_args()
 
     with open(args.config, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)["grpo_data_prep"]
+        config = yaml.safe_load(f)["sft_data_prep"]
 
     input_dir = config["input_dir"]
     out_dir = config["out_dir"]
@@ -68,6 +87,8 @@ def main():
     no_think_suffix = config.get("no_think_suffix", "/no_think")
 
     os.makedirs(out_dir, exist_ok=True)
+
+    stats = {}
 
     for split_name in ["train", "dev", "test"]:
         in_path = os.path.join(input_dir, f"{split_name}.jsonl")

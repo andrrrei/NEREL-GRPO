@@ -1,0 +1,108 @@
+nerel_preproc:
+  local_dataset_path: "source_data"
+  out_dir: "data/nerel_processed"
+
+  do_split: true
+  split_by: "\n"
+
+  fraction_train: 0.1
+  fraction_dev: 0.5
+  fraction_test: 0.5
+  seed: 42
+
+
+sft_data_prep:
+  input_dir: "data/nerel_processed"
+  out_dir: "data/nerel_sft"
+  add_no_think: true
+  no_think_suffix: "/no_think"
+
+
+run:
+  experiment_name: "sft_nerel_qwen3_4b"
+  runs_dir: "runs"
+
+
+sft_train:
+  model: "source_models/qwen3-4b"
+  tokenizer_name: "source_models/qwen3-4b"
+
+  train_file: "data/nerel_sft/train.jsonl"
+  val_file: "data/nerel_sft/dev.jsonl"
+
+  output_subdir: "model_output"
+  merged_subdir: "model_merged"
+
+  trainer:
+    per_device_train_batch_size: 2
+    per_device_eval_batch_size: 1
+    gradient_accumulation_steps: 8
+    num_train_epochs: 3
+    learning_rate: 0.00002
+    weight_decay: 0.05
+    warmup_steps: 16
+    lr_scheduler_type: "cosine"
+    logging_steps: 10
+    save_steps: 50
+    eval_steps: 10
+    eval_strategy: "steps"
+    save_strategy: "steps"
+    save_total_limit: 1
+    save_on_each_node: true
+    load_best_model_at_end: false
+    fp16: false
+    bf16: true
+    dataloader_num_workers: 4
+    dataloader_pin_memory: false
+    remove_unused_columns: false
+    ddp_find_unused_parameters: false
+    ddp_timeout: 7200
+    disable_tqdm: false
+    optim: "adamw_torch_fused"
+    adam_beta1: 0.9
+    adam_beta2: 0.999
+    adam_epsilon: 0.00000001
+    max_grad_norm: 1.0
+    seed: 42
+    data_seed: 42
+    report_to: []
+
+  lora:
+    r: 32
+    lora_alpha: 64
+    lora_dropout: 0.0
+    bias: "none"
+    target_modules:
+      - "q_proj"
+      - "v_proj"
+      - "k_proj"
+      - "o_proj"
+      - "gate_proj"
+      - "up_proj"
+      - "down_proj"
+    modules_to_save:
+      - "lm_head"
+      - "embed_tokens"
+
+  bos_token: "<|endoftext|>"
+  eos_token: "<|im_end|>"
+  pad_token: "<|endoftext|>"
+
+  max_tokens_count: 2048
+  only_target_loss: true
+
+  load_in_4bit: false
+  load_in_8bit: false
+  gradient_checkpointing: false
+
+  torch_dtype: "bfloat16"
+  cuda_visible_devices: "0"
+
+
+sft_eval:
+  dataset: "data/nerel_sft/test.jsonl"
+  max_new_tokens: 256
+  temperature: 0.0
+  top_p: 1.0
+  batch_size: 1
+  use_merged_model: true

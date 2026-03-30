@@ -1,6 +1,6 @@
-# NEREL GRPO Training Pipeline
+# NEREL SFT + GRPO Training Pipeline
 
-This repository contains a full training and evaluation pipeline for fine-tuning LLMs on the [**NEREL**](https://huggingface.co/datasets/iluvvatar/NEREL) dataset using GRPO.
+This repository contains a full training and evaluation pipeline for fine-tuning LLMs on the [**NEREL**](https://huggingface.co/datasets/iluvvatar/NEREL) dataset using GRPO and SFT.
 
 The goal of the project is to develop a model that can extract named entities from Russian text and output them in a structured JSON format. This project was created as part of an exploration of reinforcement learning techniques for aligning LLMs with the Russian language.
 
@@ -8,7 +8,8 @@ Training is performed using **GRPO (Group Relative Policy Optimization)** with a
 
 The repository implements the full workflow:
 
-- preprocessing the NEREL dataset and preparing it for GRPO training
+- preprocessing the NEREL dataset
+- SFT training
 - GRPO training
 - model evaluation
 - metric computation
@@ -31,6 +32,12 @@ Core pipeline scripts:
 - `run_queue.py`  
   Runs multiple experiments sequentially using a list of configuration files.
 
+- `run_train_sft.py`  
+  Launches supervised fine-tuning using standard next-token prediction loss.
+
+- `run_eval_sft.py`  
+  Runs evaluation for SFT models.
+
 Dataset preparation:
 
 - `preproc_nerel.py`  
@@ -38,6 +45,9 @@ Dataset preparation:
 
 - `prepare_grpo_dataset.py`  
   Converts the preprocessed dataset into the message-based format required for GRPO training.
+
+- `prepare_sft_dataset.py`  
+Converts the dataset into a standard instruction-response format for supervised fine-tuning.
 
 Evaluation:
 
@@ -78,7 +88,6 @@ Each stage is implemented as an independent script but can also be executed toge
 ### 1. Dataset preprocessing
 
 Script: `preproc_nerel.py`
-
 
 
 The raw NEREL dataset contains entity annotations with character offsets and may include discontinuous entities.
@@ -133,8 +142,23 @@ The following files are produced:
 These files are directly consumed by the GRPO trainer.
 
 
+### 3. Supervised fine-tuning (SFT)
 
-### 3. GRPO training
+Script: `run_train_sft.py`
+
+This stage performs standard supervised fine-tuning using the processed dataset.
+
+The model is trained to generate the correct list of entities given an input text.
+
+Key characteristics:
+
+- next-token prediction objective
+- LoRA fine-tuning
+- deterministic training signal
+- used to compare with GRPO stage
+
+
+### 4. GRPO training
 
 Script: `run_train_grpo.py`
 
@@ -156,7 +180,7 @@ Each run directory contains:
 The model_output directory contains model checkpoints produced during training.
 
 
-### 4. Evaluation
+### 5. Evaluation
 
 Script: `run_eval_grpo.py`
 
@@ -183,7 +207,7 @@ metrics.json contains aggregated evaluation metrics computed from the prediction
 
 
 
-### 5. Metrics
+### 6. Metrics
 
 Metrics are computed by the script `compute_nerel_metrics.py`.
 
@@ -274,7 +298,13 @@ This configuration file contains several sections controlling different stages o
 The entire experiment pipeline can be executed using a single command:
 
 ```bash
-python run_pipeline.py --config grpo_config.yaml
+python run_pipeline.py --config grpo_config.yaml --mode grpo
+```
+
+or
+
+```bash
+python run_pipeline.py --config sft_config.yaml --mode sft
 ```
 
 Each experiment produces a new run directory inside the `runs` folder.
@@ -285,14 +315,19 @@ Each experiment produces a new run directory inside the `runs` folder.
 
 Multiple experiments can be scheduled using `run_queue.py`.
 
-A queue configuration file lists the experiment configuration files to execute.
+Each experiment in the queue can specify a training mode:
 
-The queue can be started using:
+- grpo — reinforcement learning
+- sft — supervised fine-tuning
 
-```bash
-python run_queue.py --queue queue.yaml
-```
+Example:
 
+experiments:
+  - config: grpo_config.yaml
+    mode: grpo
+  - config: sft_config.yaml
+    mode: sft
+    
 Experiments are executed sequentially.
 
 ## Training visualization

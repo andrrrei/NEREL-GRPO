@@ -1,0 +1,11 @@
+experiments:
+  - config: grpo_config_exp1.yaml
+    mode: grpo
+
+  - config: sft_config_exp1.yaml
+    mode: sft
+
+  - config: grpo_config_exp2.yaml
+    mode: grpo
+
+stop_on_error: true

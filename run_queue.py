@@ -67,14 +67,41 @@ def main():
     python_bin = sys.executable
     results = []
 
-    for idx, config_path in enumerate(experiments, start=1):
-        logger.info("Experiment %d/%d started: %s", idx, len(experiments), config_path)
+    for idx, exp in enumerate(experiments, start=1):
+        if isinstance(exp, str):
+            config_path = exp
+            mode = "grpo"
+        elif isinstance(exp, dict):
+            config_path = exp.get("config")
+            mode = exp.get("train_mode", "grpo")
+        else:
+            logger.error("Invalid experiment spec at index %d: %r", idx, exp)
+            results.append(
+                {
+                    "config": None,
+                    "train_mode": None,
+                    "status": "invalid_spec",
+                    "return_code": None,
+                }
+            )
+            if stop_on_error:
+                break
+            continue
 
-        if not os.path.exists(config_path):
+        logger.info(
+            "Experiment %d/%d started: config=%s mode=%s",
+            idx,
+            len(experiments),
+            config_path,
+            mode,
+        )
+
+        if not config_path or not os.path.exists(config_path):
             logger.error("Config not found: %s", config_path)
             results.append(
                 {
                     "config": config_path,
+                    "train_mode": mode,
                     "status": "missing_config",
                     "return_code": None,
                 }
@@ -83,23 +110,39 @@ def main():
                 break
             continue
 
-        cmd = [python_bin, "run_pipeline.py", "--config", config_path]
+        cmd = [
+            python_bin,
+            "run_pipeline.py",
+            "--config",
+            config_path,
+            "--train_mode",
+            mode,
+        ]
         return_code = run_cmd(cmd, logger)
 
         if return_code == 0:
-            logger.info("Experiment finished successfully: %s", config_path)
+            logger.info(
+                "Experiment finished successfully: config=%s mode=%s", config_path, mode
+            )
             results.append(
                 {
                     "config": config_path,
+                    "mode": mode,
                     "status": "ok",
                     "return_code": 0,
                 }
             )
         else:
-            logger.error("Experiment failed: %s | code=%s", config_path, return_code)
+            logger.error(
+                "Experiment failed: config=%s mode=%s code=%s",
+                config_path,
+                mode,
+                return_code,
+            )
             results.append(
                 {
                     "config": config_path,
+                    "mode": mode,
                     "status": "failed",
                     "return_code": return_code,
                 }

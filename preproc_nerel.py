@@ -99,7 +99,7 @@ def sample_to_sentence_examples(
         if not seg_entities:
             continue
 
-        examples.append({"query": seg_text, "entities": seg_entities})
+        examples.append({"text": seg_text, "entities": seg_entities})
 
     return examples
 
@@ -163,7 +163,7 @@ def main():
 
                 for ex in examples:
                     record = {
-                        "text": ex["query"],
+                        "text": ex["text"],
                         "entities": ex["entities"],
                     }
                     f.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -173,7 +173,7 @@ def main():
             "docs_in_split": total_docs,
             "examples_written": kept,
             "dropped_docs_discont": dropped_discont,
-            "dropped_docs_empty_or_too_short": dropped_empty,
+            "dropped_docs_empty_or_short": dropped_empty,
         }
 
     with open(
