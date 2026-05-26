@@ -78,6 +78,7 @@ def main():
         "vllm_gpu_memory_utilization": train_cfg["vllm_gpu_memory_utilization"],
         "vllm_max_model_len": train_cfg["vllm_max_model_len"],
         "vllm_tensor_parallel_size": train_cfg["vllm_tensor_parallel_size"],
+        "vllm_max_lora_rank": train_cfg["vllm_max_lora_rank"],
         "logging_steps": train_cfg["logging_steps"],
         "save_steps": train_cfg["save_steps"],
         "save_total_limit": train_cfg["save_total_limit"],
